@@ -11,41 +11,32 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local activeESP = {}
-local espInventoryEnabled = false  -- OFF au démarrage
+local espInventoryEnabled = false
 local nameCache = {} 
 
--- --- SYSTÈME DE COULEURS PERSONNALISÉ ---
 local function getToolColor(name)
     local n = name:lower()
-    
     local goldWeapons = {"m16", "ak47", "mp5", "remi", "crossbow", "rpg", "tactical shovel", "tactical axe"}
     for _, v in pairs(goldWeapons) do
         if string.find(n, v) then
-            return Color3.fromRGB(255, 170, 0) -- OR (GOLD)
+            return Color3.fromRGB(255, 170, 0)
         end
     end
-    
     if string.find(n, "annaconda") then
-        return Color3.fromRGB(255, 0, 0) -- ROUGE
+        return Color3.fromRGB(255, 0, 0)
     end
-
     if string.find(n, "omega") then return Color3.fromRGB(255, 0, 0) end
     if string.find(n, "legendary") then return Color3.fromRGB(255, 215, 0) end
-    
-    return Color3.fromRGB(255, 255, 255) -- Blanc pour le reste
+    return Color3.fromRGB(255, 255, 255)
 end
 
--- --- RÉCUPÉRATION DU NOM RÉEL (ANTI-LAG) ---
 local function getRealName(t)
     if not t then return "..." end
     if nameCache[t.Name] then return nameCache[t.Name] end
-    
     local h = t:FindFirstChild("Handle")
     if not h then return t.Name end
-    
     local childrenNames = {}
     for _, c in ipairs(h:GetChildren()) do childrenNames[c.Name] = true end
-
     for _, folder in ipairs({ReplicatedStorage:FindFirstChild("Items"), StarterPack}) do
         if folder then
             for _, item in ipairs(folder:GetDescendants()) do
@@ -65,28 +56,23 @@ local function getRealName(t)
     return t.Name
 end
 
--- --- CRÉATION ESP + TRACER ---
 local function createESP(p)
     if not p.Character or not p.Character:FindFirstChild("Head") then return end
     local char = p.Character
-
     if activeESP[p.Name] then
         if activeESP[p.Name].bb then activeESP[p.Name].bb:Destroy() end
         if activeESP[p.Name].line then activeESP[p.Name].line:Remove() end
     end
-
     local bb = Instance.new("BillboardGui", char.Head)
     bb.Name = "BSpin_Final_ESP"
     bb.Size = UDim2.new(0, 60, 0, 80)
     bb.AlwaysOnTop = true
     bb.Enabled = espInventoryEnabled
-
     local bg = Instance.new("Frame", bb)
     bg.Size = UDim2.new(1, 0, 1, 0)
     bg.BackgroundColor3 = Color3.new(0, 0, 0)
     bg.BackgroundTransparency = 0.5
     Instance.new("UICorner", bg)
-
     local sc = Instance.new("ScrollingFrame", bg)
     sc.Size = UDim2.new(1, -6, 1, -6)
     sc.Position = UDim2.new(0, 3, 0, 3)
@@ -94,13 +80,11 @@ local function createESP(p)
     sc.ScrollBarThickness = 0
     sc.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Instance.new("UIListLayout", sc).Padding = UDim.new(0, 2)
-
     local line = Drawing.new("Line")
     line.Thickness = 1
     line.Color = Color3.new(1, 1, 1)
     line.Transparency = 0
     line.Visible = false
-
     local lastUpd = 0
     local conn
     conn = RunService.RenderStepped:Connect(function()
@@ -111,9 +95,7 @@ local function createESP(p)
             activeESP[p.Name] = nil
             return
         end
-
         bb.Enabled = espInventoryEnabled
-
         if espInventoryEnabled then
             local vector, onScreen = Camera:WorldToViewportPoint(char.Head.Position)
             if onScreen then
@@ -122,30 +104,24 @@ local function createESP(p)
                 line.To = Vector2.new(vector.X, vector.Y)
             else line.Visible = false end
         else line.Visible = false end
-
         if tick() - lastUpd > 1.5 then
             lastUpd = tick()
             for _, v in ipairs(sc:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
-            
             local ts = {}
             if p:FindFirstChild("Backpack") then
                 for _, t in ipairs(p.Backpack:GetChildren()) do if t:IsA("Tool") then table.insert(ts, t) end end
             end
             for _, t in ipairs(char:GetChildren()) do if t:IsA("Tool") then table.insert(ts, t) end end
-
             for _, tool in ipairs(ts) do
                 local realName = getRealName(tool)
                 local f = Instance.new("Frame", sc)
-                f.Size = UDim2.new(1, 0, 0, 22)
+                f.Size = UDim2.new(1, 0, 0, 10)
                 f.BackgroundTransparency = 1
-
                 local l = Instance.new("TextLabel", f)
                 l.Size = UDim2.new(1, 0, 1, 0)
                 l.Text = " " .. realName
-                
                 local textColor = getToolColor(realName)
                 l.TextColor3 = textColor
-                
                 if tool.Parent == char then
                     l.Font = Enum.Font.SourceSansBold
                     l.TextStrokeTransparency = 0.4
@@ -154,18 +130,15 @@ local function createESP(p)
                     l.Font = Enum.Font.SourceSans
                     l.TextStrokeTransparency = 1
                 end
-                
                 l.TextScaled = true
                 l.BackgroundTransparency = 1
                 l.TextXAlignment = Enum.TextXAlignment.Left
             end
         end
     end)
-
     activeESP[p.Name] = {bb = bb, line = line}
 end
 
--- Rafraîchissement quand toggle ON
 local function refreshInventoryESP()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
@@ -182,7 +155,6 @@ local function refreshInventoryESP()
     end
 end
 
--- --- DÉTECTION AGRESSIVE ---
 task.spawn(function()
     while true do
         for _, p in ipairs(Players:GetPlayers()) do
@@ -198,7 +170,6 @@ end)
 
 print("ESP BLOCKSPIN : M16/AK/MP5 Gold & Annaconda Red LOADED")
 
--- === INTERFACE ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "anouar777x_KING"
 ScreenGui.IgnoreGuiInset = true
@@ -262,9 +233,19 @@ AimbotToggle.Text = "Aimbot: OFF"
 AimbotToggle.TextScaled = true
 Instance.new("UICorner", AimbotToggle).CornerRadius = UDim.new(0,8)
 
+-- NOUVEAU WALLCHECK juste sous Aimbot
+local WallcheckAimbotToggle = Instance.new("TextButton", MainFrame)
+WallcheckAimbotToggle.Size = UDim2.new(0.8,0,0.12,0)
+WallcheckAimbotToggle.Position = UDim2.new(0.1,0,0.54,0)
+WallcheckAimbotToggle.BackgroundColor3 = Color3.fromRGB(0,255,0)
+WallcheckAimbotToggle.Text = "Wallcheck: ON"
+WallcheckAimbotToggle.TextScaled = true
+WallcheckAimbotToggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", WallcheckAimbotToggle).CornerRadius = UDim.new(0,8)
+
 local FOVSlider = Instance.new("TextBox", MainFrame)
 FOVSlider.Size = UDim2.new(0.8,0,0.12,0)
-FOVSlider.Position = UDim2.new(0.1,0,0.54,0)
+FOVSlider.Position = UDim2.new(0.1,0,0.68,0)
 FOVSlider.BackgroundColor3 = Color3.fromRGB(50,50,50)
 FOVSlider.Text = "FOV: 110"
 FOVSlider.TextColor3 = Color3.fromRGB(255,0,0)
@@ -273,7 +254,7 @@ Instance.new("UICorner", FOVSlider).CornerRadius = UDim.new(0,8)
 
 local AimPartToggle = Instance.new("TextButton", MainFrame)
 AimPartToggle.Size = UDim2.new(0.8,0,0.12,0)
-AimPartToggle.Position = UDim2.new(0.1,0,0.68,0)
+AimPartToggle.Position = UDim2.new(0.1,0,0.82,0)
 AimPartToggle.BackgroundColor3 = Color3.fromRGB(100,100,255)
 AimPartToggle.Text = "Target: Head (fixed)"
 AimPartToggle.TextScaled = true
@@ -282,7 +263,7 @@ Instance.new("UICorner", AimPartToggle).CornerRadius = UDim.new(0,8)
 
 local WallcheckToggle = Instance.new("TextButton", MainFrame)
 WallcheckToggle.Size = UDim2.new(0.8,0,0.12,0)
-WallcheckToggle.Position = UDim2.new(0.1,0,0.82,0)
+WallcheckToggle.Position = UDim2.new(0.1,0,0.96,0)
 WallcheckToggle.BackgroundColor3 = Color3.fromRGB(255,100,100)
 WallcheckToggle.Text = "Wallcheck: ON"
 WallcheckToggle.TextScaled = true
@@ -291,7 +272,7 @@ Instance.new("UICorner", WallcheckToggle).CornerRadius = UDim.new(0,8)
 
 local PlayerListFrame = Instance.new("ScrollingFrame", MainFrame)
 PlayerListFrame.Size = UDim2.new(0.8,0,0.25,0)
-PlayerListFrame.Position = UDim2.new(0.1,0,0.82,0)
+PlayerListFrame.Position = UDim2.new(0.1,0,0.82,0) -- tu pourras ajuster si ça dépasse trop
 PlayerListFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 PlayerListFrame.ScrollBarThickness = 6
 PlayerListFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -300,7 +281,6 @@ Instance.new("UICorner", PlayerListFrame).CornerRadius = UDim.new(0,8)
 local PlayerListLayout = Instance.new("UIListLayout", PlayerListFrame)
 PlayerListLayout.Padding = UDim.new(0,4)
 
--- Variables
 local espEnabledStatus = false
 local AimbotOn = false
 local FOVRadius = 110
@@ -317,7 +297,6 @@ FOVCircle.Transparency = 0.6
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 
--- Aimbot modes
 local AIM_MODES = {
     {name = "Head (fixed)",               part = "Head",                        color = Color3.fromRGB(100,100,255)},
     {name = "Torso (fixed)",              part = "HumanoidRootPart",            color = Color3.fromRGB(255,150,50)},
@@ -332,7 +311,6 @@ local currentAutoIndex = 1
 local lastSwitchTime = 0
 local SWITCH_INTERVAL = 0.7
 
--- === UTILITY FUNCTIONS ===
 local function IsAlive(char)
     local h = char and char:FindFirstChildOfClass("Humanoid")
     return h and h.Health > 0
@@ -349,7 +327,6 @@ local function IsVisible(part)
     return not result
 end
 
--- === ESP ===
 local function removeESP(char)
     if char then
         local head = char:FindFirstChild("Head")
@@ -366,18 +343,15 @@ local function applyESP(char)
     local plr = Players:GetPlayerFromCharacter(char)
     if not plr or plr == LocalPlayer then return end
     removeESP(char)
-
     local head = char:FindFirstChild("Head")
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not head or not hum or not IsAlive(char) then return end
-
     local bill = Instance.new("BillboardGui", head)
     bill.Name = "AnouarNameHP"
     bill.Adornee = head
     bill.Size = UDim2.new(0,160,0,35)
     bill.StudsOffset = Vector3.new(0,2.8,0)
     bill.AlwaysOnTop = true
-
     local name = Instance.new("TextLabel", bill)
     name.Size = UDim2.new(1,0,0,16)
     name.BackgroundTransparency = 1
@@ -386,25 +360,21 @@ local function applyESP(char)
     name.TextStrokeTransparency = 0
     name.Font = Enum.Font.SourceSansBold
     name.TextSize = 14
-
     local hpBg = Instance.new("Frame", bill)
     hpBg.Size = UDim2.new(1,-6,0,5)
     hpBg.Position = UDim2.new(0,3,0,16)
     hpBg.BackgroundColor3 = Color3.new(0,0,0)
     Instance.new("UICorner", hpBg).CornerRadius = UDim.new(0,3)
-
     local hpFill = Instance.new("Frame", hpBg)
     hpFill.Size = UDim2.new(1,0,1,0)
     hpFill.BackgroundColor3 = Color3.fromRGB(0,255,0)
     Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0,3)
-
     local hpText = Instance.new("TextLabel", hpBg)
     hpText.Size = UDim2.new(1,0,1,0)
     hpText.BackgroundTransparency = 1
     hpText.TextColor3 = Color3.new(1,1,1)
     hpText.TextStrokeTransparency = 0
     hpText.TextSize = 8
-
     local function updateHP()
         if hum.Parent and IsAlive(char) then
             local r = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
@@ -414,11 +384,9 @@ local function applyESP(char)
             removeESP(char)
         end
     end
-
     hum.HealthChanged:Connect(updateHP)
     hum.Died:Connect(function() removeESP(char) end)
     updateHP()
-
     local hl = Instance.new("Highlight", char)
     hl.Name = "AnouarHighlight"
     hl.OutlineColor = Color3.fromRGB(255,255,0)
@@ -476,7 +444,6 @@ ESPToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === Protected Friends List ===
 local function UpdateProtectedList()
     for _, b in PlayerButtons do b:Destroy() end
     PlayerButtons = {}
@@ -491,7 +458,6 @@ local function UpdateProtectedList()
             btn.TextScaled = true
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
             table.insert(PlayerButtons, btn)
-
             btn.MouseButton1Click:Connect(function()
                 ProtectedPlayers[p] = not ProtectedPlayers[p]
                 UpdateProtectedList()
@@ -507,32 +473,25 @@ Players.PlayerAdded:Connect(UpdateProtectedList)
 Players.PlayerRemoving:Connect(UpdateProtectedList)
 UpdateProtectedList()
 
--- === AIMBOT ===
 local function GetTargetPart(char)
     local mode = AIM_MODES[currentModeIndex]
     local partName
-
     if mode.parts then
         partName = mode.parts[currentAutoIndex]
     else
         partName = mode.part
     end
-
     local part = char:FindFirstChild(partName)
-    
-    -- Fallback for R6 / legacy names
     if not part then
         if partName == "RightUpperArm" then part = char:FindFirstChild("Right Arm") end
         if partName == "LeftUpperArm"   then part = char:FindFirstChild("Left Arm") end
     end
-    
     return part or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 end
 
 local function GetClosest()
     local closest, distMin = nil, math.huge
     local center = Camera.ViewportSize / 2
-
     for _, p in Players:GetPlayers() do
         if p ~= LocalPlayer and not ProtectedPlayers[p] and p.Character and IsAlive(p.Character) then
             local part = GetTargetPart(p.Character)
@@ -557,7 +516,6 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Position = Camera.ViewportSize / 2
     FOVCircle.Radius = FOVRadius
     FOVCircle.Visible = AimbotOn
-
     if AimbotOn then
         local target = GetClosest()
         if target and target.Character then
@@ -570,12 +528,10 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Auto switch logic (only for auto modes)
 RunService.Heartbeat:Connect(function(dt)
     if not AimbotOn then return end
     local mode = AIM_MODES[currentModeIndex]
     if not mode.parts then return end
-
     lastSwitchTime = lastSwitchTime + dt
     if lastSwitchTime >= SWITCH_INTERVAL then
         lastSwitchTime = 0
@@ -583,11 +539,18 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- === BUTTONS ===
 AimbotToggle.MouseButton1Click:Connect(function()
     AimbotOn = not AimbotOn
     AimbotToggle.Text = "Aimbot: " .. (AimbotOn and "ON" or "OFF")
     AimbotToggle.BackgroundColor3 = AimbotOn and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+end)
+
+WallcheckAimbotToggle.MouseButton1Click:Connect(function()
+    WallCheckEnabled = not WallCheckEnabled
+    WallcheckAimbotToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
+    WallcheckAimbotToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
+    WallcheckToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
+    WallcheckToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
 end)
 
 AimPartToggle.MouseButton1Click:Connect(function()
@@ -601,6 +564,8 @@ WallcheckToggle.MouseButton1Click:Connect(function()
     WallCheckEnabled = not WallCheckEnabled
     WallcheckToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
     WallcheckToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
+    WallcheckAimbotToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
+    WallcheckAimbotToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
 end)
 
 FOVSlider.FocusLost:Connect(function(enterPressed)
@@ -624,7 +589,6 @@ ToggleButton.MouseButton1Click:Connect(function()
     if guiOpen then UpdateProtectedList() end
 end)
 
--- Bouton ESP Inventory ON/OFF
 ESPInventoryToggle.MouseButton1Click:Connect(function()
     espInventoryEnabled = not espInventoryEnabled
     ESPInventoryToggle.Text = "ESP Inventory: " .. (espInventoryEnabled and "ON" or "OFF")
@@ -660,4 +624,4 @@ end
 makeDraggable(MainFrame, MainDrag)
 makeDraggable(ToggleButton, ToggleDrag)
 
-print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - ON/OFF via bouton")
+print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - Wallcheck sous Aimbot ajouté")
