@@ -136,7 +136,7 @@ local function createESP(p)
             for _, tool in ipairs(ts) do
                 local realName = getRealName(tool)
                 local f = Instance.new("Frame", sc)
-                f.Size = UDim2.new(1, 0, 0, 12)
+                f.Size = UDim2.new(1, 0, 0, 13)
                 f.BackgroundTransparency = 1
 
                 local l = Instance.new("TextLabel", f)
