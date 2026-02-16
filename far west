@@ -18,13 +18,9 @@ local function getToolColor(name)
     local n = name:lower()
     local goldWeapons = {"m16", "ak47", "mp5", "remi", "crossbow", "rpg", "tactical shovel", "tactical axe"}
     for _, v in pairs(goldWeapons) do
-        if string.find(n, v) then
-            return Color3.fromRGB(255, 170, 0)
-        end
+        if string.find(n, v) then return Color3.fromRGB(255, 170, 0) end
     end
-    if string.find(n, "annaconda") then
-        return Color3.fromRGB(255, 0, 0)
-    end
+    if string.find(n, "annaconda") then return Color3.fromRGB(255, 0, 0) end
     if string.find(n, "omega") then return Color3.fromRGB(255, 0, 0) end
     if string.find(n, "legendary") then return Color3.fromRGB(255, 215, 0) end
     return Color3.fromRGB(255, 255, 255)
@@ -115,7 +111,7 @@ local function createESP(p)
             for _, tool in ipairs(ts) do
                 local realName = getRealName(tool)
                 local f = Instance.new("Frame", sc)
-                f.Size = UDim2.new(1, 0, 0, 10)
+                f.Size = UDim2.new(1, 0, 0, 22)
                 f.BackgroundTransparency = 1
                 local l = Instance.new("TextLabel", f)
                 l.Size = UDim2.new(1, 0, 1, 0)
@@ -233,15 +229,15 @@ AimbotToggle.Text = "Aimbot: OFF"
 AimbotToggle.TextScaled = true
 Instance.new("UICorner", AimbotToggle).CornerRadius = UDim.new(0,8)
 
--- NOUVEAU WALLCHECK juste sous Aimbot
-local WallcheckAimbotToggle = Instance.new("TextButton", MainFrame)
-WallcheckAimbotToggle.Size = UDim2.new(0.8,0,0.12,0)
-WallcheckAimbotToggle.Position = UDim2.new(0.1,0,0.54,0)
-WallcheckAimbotToggle.BackgroundColor3 = Color3.fromRGB(0,255,0)
-WallcheckAimbotToggle.Text = "Wallcheck: ON"
-WallcheckAimbotToggle.TextScaled = true
-WallcheckAimbotToggle.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", WallcheckAimbotToggle).CornerRadius = UDim.new(0,8)
+-- WALLCHECK UNIQUE (juste sous Aimbot)
+local WallcheckToggle = Instance.new("TextButton", MainFrame)
+WallcheckToggle.Size = UDim2.new(0.8,0,0.12,0)
+WallcheckToggle.Position = UDim2.new(0.1,0,0.54,0)
+WallcheckToggle.BackgroundColor3 = Color3.fromRGB(0,255,0)
+WallcheckToggle.Text = "Wallcheck: ON"
+WallcheckToggle.TextScaled = true
+WallcheckToggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", WallcheckToggle).CornerRadius = UDim.new(0,8)
 
 local FOVSlider = Instance.new("TextBox", MainFrame)
 FOVSlider.Size = UDim2.new(0.8,0,0.12,0)
@@ -261,18 +257,9 @@ AimPartToggle.TextScaled = true
 AimPartToggle.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", AimPartToggle).CornerRadius = UDim.new(0,8)
 
-local WallcheckToggle = Instance.new("TextButton", MainFrame)
-WallcheckToggle.Size = UDim2.new(0.8,0,0.12,0)
-WallcheckToggle.Position = UDim2.new(0.1,0,0.96,0)
-WallcheckToggle.BackgroundColor3 = Color3.fromRGB(255,100,100)
-WallcheckToggle.Text = "Wallcheck: ON"
-WallcheckToggle.TextScaled = true
-WallcheckToggle.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", WallcheckToggle).CornerRadius = UDim.new(0,8)
-
 local PlayerListFrame = Instance.new("ScrollingFrame", MainFrame)
 PlayerListFrame.Size = UDim2.new(0.8,0,0.25,0)
-PlayerListFrame.Position = UDim2.new(0.1,0,0.82,0) -- tu pourras ajuster si ça dépasse trop
+PlayerListFrame.Position = UDim2.new(0.1,0,0.96,0)  -- ajusté pour coller mieux
 PlayerListFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 PlayerListFrame.ScrollBarThickness = 6
 PlayerListFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -298,10 +285,10 @@ FOVCircle.Filled = false
 FOVCircle.Visible = false
 
 local AIM_MODES = {
-    {name = "Head (fixed)",               part = "Head",                        color = Color3.fromRGB(100,100,255)},
-    {name = "Torso (fixed)",              part = "HumanoidRootPart",            color = Color3.fromRGB(255,150,50)},
-    {name = "Right Arm (fixed)",          part = "RightUpperArm",               color = Color3.fromRGB(50,205,50)},
-    {name = "Left Arm (fixed)",           part = "LeftUpperArm",                color = Color3.fromRGB(50,255,150)},
+    {name = "Head (fixed)", part = "Head", color = Color3.fromRGB(100,100,255)},
+    {name = "Torso (fixed)", part = "HumanoidRootPart", color = Color3.fromRGB(255,150,50)},
+    {name = "Right Arm (fixed)", part = "RightUpperArm", color = Color3.fromRGB(50,205,50)},
+    {name = "Left Arm (fixed)", part = "LeftUpperArm", color = Color3.fromRGB(50,255,150)},
     {name = "Auto Switch (Head ↔ Torso)", parts = {"Head", "HumanoidRootPart"}, color = Color3.fromRGB(180,100,255)},
     {name = "Auto Switch (Right ↔ Left Arm)", parts = {"RightUpperArm", "LeftUpperArm"}, color = Color3.fromRGB(255, 255, 0)} 
 }
@@ -475,16 +462,11 @@ UpdateProtectedList()
 
 local function GetTargetPart(char)
     local mode = AIM_MODES[currentModeIndex]
-    local partName
-    if mode.parts then
-        partName = mode.parts[currentAutoIndex]
-    else
-        partName = mode.part
-    end
+    local partName = mode.parts and mode.parts[currentAutoIndex] or mode.part
     local part = char:FindFirstChild(partName)
     if not part then
         if partName == "RightUpperArm" then part = char:FindFirstChild("Right Arm") end
-        if partName == "LeftUpperArm"   then part = char:FindFirstChild("Left Arm") end
+        if partName == "LeftUpperArm" then part = char:FindFirstChild("Left Arm") end
     end
     return part or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 end
@@ -545,10 +527,8 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotToggle.BackgroundColor3 = AimbotOn and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
 end)
 
-WallcheckAimbotToggle.MouseButton1Click:Connect(function()
+WallcheckToggle.MouseButton1Click:Connect(function()
     WallCheckEnabled = not WallCheckEnabled
-    WallcheckAimbotToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
-    WallcheckAimbotToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
     WallcheckToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
     WallcheckToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
 end)
@@ -558,14 +538,6 @@ AimPartToggle.MouseButton1Click:Connect(function()
     local mode = AIM_MODES[currentModeIndex]
     AimPartToggle.Text = "Target: " .. mode.name
     AimPartToggle.BackgroundColor3 = mode.color
-end)
-
-WallcheckToggle.MouseButton1Click:Connect(function()
-    WallCheckEnabled = not WallCheckEnabled
-    WallcheckToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
-    WallcheckToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
-    WallcheckAimbotToggle.Text = "Wallcheck: " .. (WallCheckEnabled and "ON" or "OFF")
-    WallcheckAimbotToggle.BackgroundColor3 = WallCheckEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,100,100)
 end)
 
 FOVSlider.FocusLost:Connect(function(enterPressed)
@@ -624,4 +596,4 @@ end
 makeDraggable(MainFrame, MainDrag)
 makeDraggable(ToggleButton, ToggleDrag)
 
-print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - Wallcheck sous Aimbot ajouté")
+print("Anouar777x Hub LOADED - Un seul Wallcheck sous Aimbot")
