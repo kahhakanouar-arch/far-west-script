@@ -1,4 +1,4 @@
--- Anouar777x Hub - ESP Inventory (COLOR CUSTOM FIX) + Aimbot + Protect Friends
+-- Anouar777x Hub - ESP Inventory (COLOR CUSTOM FIX)
 -- ANOUAR IS THE KING 👑
 -- ESP Inventory OFF par défaut - ON/OFF via bouton dans le menu
 
@@ -308,7 +308,7 @@ local FOVRadius = 110
 local WallCheckEnabled = true
 local ProtectedPlayers = {}
 local PlayerButtons = {}
-local AIM_SMOOTHNESS = 1.0
+local AIM_SMOOTHNESS = 0.9
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Radius = FOVRadius
