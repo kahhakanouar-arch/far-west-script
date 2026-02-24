@@ -1,4 +1,4 @@
--- Anouar777x Hub - ESP Inventory (COLOR CUSTOM FIX)
+-- Anouar777x Hub - ESP Inventory (COLOR CUSTOM FIX) + Aimbot + Protect Friends
 -- ANOUAR IS THE KING 👑
 -- ESP Inventory OFF par défaut - ON/OFF via bouton dans le menu
 
@@ -308,7 +308,10 @@ local FOVRadius = 110
 local WallCheckEnabled = true
 local ProtectedPlayers = {}
 local PlayerButtons = {}
-local AIM_SMOOTHNESS = 0.9
+local AIM_SMOOTHNESS = 1.0
+
+-- AJOUT PREDICTION (valeur demandée)
+local PREDICTION_TIME = 0.03
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Radius = FOVRadius
@@ -509,6 +512,7 @@ Players.PlayerRemoving:Connect(UpdateProtectedList)
 UpdateProtectedList()
 
 -- === AIMBOT ===
+
 local function GetTargetPart(char)
     local mode = AIM_MODES[currentModeIndex]
     local partName
@@ -530,6 +534,17 @@ local function GetTargetPart(char)
     return part or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 end
 
+local function GetPredictedPosition(char)
+    local part = GetTargetPart(char)
+    if not part then return nil end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return part.Position end
+    
+    local velocity = root.Velocity
+    return part.Position + (velocity * PREDICTION_TIME)
+end
+
 local function GetClosest()
     local closest, distMin = nil, math.huge
     local center = Camera.ViewportSize / 2
@@ -538,7 +553,8 @@ local function GetClosest()
         if p ~= LocalPlayer and not ProtectedPlayers[p] and p.Character and IsAlive(p.Character) then
             local part = GetTargetPart(p.Character)
             if part then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                local predictedPos = GetPredictedPosition(p.Character) or part.Position
+                local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPos)
                 if onScreen then
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
                     if dist < distMin and dist <= FOVRadius then
@@ -562,9 +578,9 @@ RunService.RenderStepped:Connect(function()
     if AimbotOn then
         local target = GetClosest()
         if target and target.Character then
-            local part = GetTargetPart(target.Character)
-            if part then
-                local cf = CFrame.new(Camera.CFrame.Position, part.Position)
+            local predictedPos = GetPredictedPosition(target.Character)
+            if predictedPos then
+                local cf = CFrame.new(Camera.CFrame.Position, predictedPos)
                 Camera.CFrame = Camera.CFrame:Lerp(cf, AIM_SMOOTHNESS)
             end
         end
@@ -660,4 +676,4 @@ end
 makeDraggable(MainFrame, MainDrag)
 makeDraggable(ToggleButton, ToggleDrag)
 
-print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - UN SEUL Wallcheck sous Aimbot")
+print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - UN SEUL Wallcheck sous Aimbot - Prediction 0.05 added")
