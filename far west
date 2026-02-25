@@ -311,7 +311,7 @@ local PlayerButtons = {}
 local AIM_SMOOTHNESS = 1.0
 
 -- AJOUT PREDICTION (valeur demandée)
-local PREDICTION_TIME = 0.03
+local PREDICTION_TIME = 0.01
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Radius = FOVRadius
