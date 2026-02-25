@@ -1,8 +1,3 @@
--- Anouar777x Hub - ESP Inventory (COLOR CUSTOM FIX) + Aimbot + Protect Friends
--- ANOUAR IS THE KING 👑
--- ESP Inventory OFF par défaut - ON/OFF via bouton dans le menu
--- Changement : ESP Inventory déplacé SOUS LES PIEDS + Anaconda ROUGE corrigé
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -202,7 +197,6 @@ task.spawn(function()
     end
 end)
 
-print("ESP BLOCKSPIN : M16/AK/MP5 Gold & Annaconda Red LOADED - INVENTAIRE SOUS LES PIEDS")
 
 -- === INTERFACE ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
@@ -680,5 +674,3 @@ end
 
 makeDraggable(MainFrame, MainDrag)
 makeDraggable(ToggleButton, ToggleDrag)
-
-print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - UN SEUL Wallcheck sous Aimbot - Prediction 0.05 added - INVENTAIRE SOUS LES PIEDS - ANACONDA ROUGE CORRIGÉ")
