@@ -1,6 +1,7 @@
 -- Anouar777x Hub - ESP Inventory (COLOR CUSTOM FIX) + Aimbot + Protect Friends
 -- ANOUAR IS THE KING 👑
 -- ESP Inventory OFF par défaut - ON/OFF via bouton dans le menu
+-- Changement : ESP Inventory déplacé SOUS LES PIEDS + Anaconda ROUGE corrigé
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,7 +15,7 @@ local activeESP = {}
 local espInventoryEnabled = false  -- OFF au démarrage
 local nameCache = {} 
 
--- --- SYSTÈME DE COULEURS PERSONNALISÉ ---
+-- --- SYSTÈME DE COULEURS PERSONNALISÉ (Anaconda corrigé) ---
 local function getToolColor(name)
     local n = name:lower()
     
@@ -25,7 +26,8 @@ local function getToolColor(name)
         end
     end
     
-    if string.find(n, "annaconda") then
+    -- Anaconda corrigé + variantes
+    if string.find(n, "anaconda") or string.find(n, "ana conda") or string.find(n, "golden anaconda") then
         return Color3.fromRGB(255, 0, 0) -- ROUGE
     end
 
@@ -65,7 +67,7 @@ local function getRealName(t)
     return t.Name
 end
 
--- --- CRÉATION ESP + TRACER ---
+-- --- CRÉATION ESP + TRACER (INVENTAIRE SOUS LES PIEDS) ---
 local function createESP(p)
     if not p.Character or not p.Character:FindFirstChild("Head") then return end
     local char = p.Character
@@ -75,9 +77,13 @@ local function createESP(p)
         if activeESP[p.Name].line then activeESP[p.Name].line:Remove() end
     end
 
-    local bb = Instance.new("BillboardGui", char.Head)
+    local rootPart = char:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+
+    local bb = Instance.new("BillboardGui", rootPart)
     bb.Name = "BSpin_Final_ESP"
     bb.Size = UDim2.new(0, 60, 0, 80)
+    bb.StudsOffset = Vector3.new(0, -3.8, 0)   -- ← SOUS LES PIEDS (ajuste entre -3.2 et -4.5 selon le jeu)
     bb.AlwaysOnTop = true
     bb.Enabled = espInventoryEnabled
 
@@ -148,11 +154,11 @@ local function createESP(p)
                 
                 if tool.Parent == char then
                     l.Font = Enum.Font.SourceSansBold
-                    l.TextStrokeTransparency = 0.4
+                    l.TextStrokeTransparency = 0.9
                     l.TextStrokeColor3 = textColor
                 else
                     l.Font = Enum.Font.SourceSans
-                    l.TextStrokeTransparency = 1
+                    l.TextStrokeTransparency = 0.5
                 end
                 
                 l.TextScaled = true
@@ -187,7 +193,7 @@ task.spawn(function()
     while true do
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                if not p.Character.Head:FindFirstChild("BSpin_Final_ESP") then
+                if not p.Character:FindFirstChild("HumanoidRootPart") or not p.Character.HumanoidRootPart:FindFirstChild("BSpin_Final_ESP") then
                     createESP(p)
                 end
             end
@@ -196,7 +202,7 @@ task.spawn(function()
     end
 end)
 
-print("ESP BLOCKSPIN : M16/AK/MP5 Gold & Annaconda Red LOADED")
+print("ESP BLOCKSPIN : M16/AK/MP5 Gold & Annaconda Red LOADED - INVENTAIRE SOUS LES PIEDS")
 
 -- === INTERFACE ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
@@ -262,7 +268,6 @@ AimbotToggle.Text = "Aimbot: OFF"
 AimbotToggle.TextScaled = true
 Instance.new("UICorner", AimbotToggle).CornerRadius = UDim.new(0,8)
 
--- UN SEUL WALLCHECK (juste sous Aimbot)
 local WallcheckToggle = Instance.new("TextButton", MainFrame)
 WallcheckToggle.Size = UDim2.new(0.8,0,0.12,0)
 WallcheckToggle.Position = UDim2.new(0.1,0,0.54,0)
@@ -676,4 +681,4 @@ end
 makeDraggable(MainFrame, MainDrag)
 makeDraggable(ToggleButton, ToggleDrag)
 
-print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - UN SEUL Wallcheck sous Aimbot - Prediction 0.05 added")
+print("Anouar777x Hub LOADED - ESP Inventory OFF par défaut - UN SEUL Wallcheck sous Aimbot - Prediction 0.05 added - INVENTAIRE SOUS LES PIEDS - ANACONDA ROUGE CORRIGÉ")
