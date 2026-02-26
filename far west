@@ -7,7 +7,7 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 -- === CONFIGURATION ===
-local espInventoryEnabled = true 
+local espInventoryEnabled = false
 local MAX_DISTANCE = 1500 
 local UPDATE_INTERVAL = 1.0 
 local BillboardCache = {}
