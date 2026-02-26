@@ -79,7 +79,6 @@ local function updateESP(p)
     if not container then return end
     container:ClearAllChildren()
 
-    -- LIST LAYOUT : Alignement vertical en bas pour fixer l'ancrage au sol
     local layout = Instance.new("UIListLayout", container)
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.VerticalAlignment = Enum.VerticalAlignment.Bottom 
@@ -129,9 +128,6 @@ local function createESP(p)
         local bb = Instance.new("BillboardGui", root)
         bb.Name = "FixedUnderfootESP"
         bb.Size = UDim2.new(0, 200, 0, 150)
-        
-        -- StudsOffset fixe la position relative au HumanoidRootPart.
-        -- -3.5 place l'UI exactement au niveau des pieds.
         bb.StudsOffset = Vector3.new(0, -3.5, 0) 
         bb.AlwaysOnTop = true
         bb.MaxDistance = MAX_DISTANCE
@@ -142,6 +138,9 @@ local function createESP(p)
         cont.BackgroundTransparency = 1
         
         BillboardCache[p] = bb
+
+        -- AJOUT ICI : Affiche direct pour les nouveaux joueurs
+        updateESP(p)
 
         task.spawn(function()
             while char.Parent and bb.Parent do
@@ -457,30 +456,24 @@ UpdateProtectedList()
 local function GetTargetPart(char)
     local mode = AIM_MODES[currentModeIndex]
     local partName
-
     if mode.parts then
         partName = mode.parts[currentAutoIndex]
     else
         partName = mode.part
     end
-
     local part = char:FindFirstChild(partName)
-    
     if not part then
         if partName == "RightUpperArm" then part = char:FindFirstChild("Right Arm") end
         if partName == "LeftUpperArm"   then part = char:FindFirstChild("Left Arm") end
     end
-    
     return part or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 end
 
 local function GetPredictedPosition(char)
     local part = GetTargetPart(char)
     if not part then return nil end
-    
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return part.Position end
-    
     local velocity = root.Velocity
     return part.Position + (velocity * PREDICTION_TIME)
 end
@@ -488,7 +481,6 @@ end
 local function GetClosest()
     local closest, distMin = nil, math.huge
     local center = Camera.ViewportSize / 2
-
     for _, p in Players:GetPlayers() do
         if p ~= LocalPlayer and not ProtectedPlayers[p] and p.Character and IsAlive(p.Character) then
             local part = GetTargetPart(p.Character)
@@ -514,7 +506,6 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Position = Camera.ViewportSize / 2
     FOVCircle.Radius = FOVRadius
     FOVCircle.Visible = AimbotOn
-
     if AimbotOn then
         local target = GetClosest()
         if target and target.Character then
@@ -527,12 +518,10 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Auto switch logic
 RunService.Heartbeat:Connect(function(dt)
     if not AimbotOn then return end
     local mode = AIM_MODES[currentModeIndex]
     if not mode.parts then return end
-
     lastSwitchTime = lastSwitchTime + dt
     if lastSwitchTime >= SWITCH_INTERVAL then
         lastSwitchTime = 0
