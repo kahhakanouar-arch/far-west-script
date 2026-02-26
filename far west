@@ -1,55 +1,48 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPack = game:GetService("StarterPack")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-local activeESP = {}
-local espInventoryEnabled = false  -- OFF au démarrage
+-- === CONFIGURATION ===
+local espInventoryEnabled = true 
+local MAX_DISTANCE = 1500 
+local UPDATE_INTERVAL = 1.0 
+local BillboardCache = {}
 local nameCache = {} 
 
--- --- SYSTÈME DE COULEURS PERSONNALISÉ (Anaconda corrigé) ---
-local function getToolColor(name)
-    local n = name:lower()
-    
-    local goldWeapons = {"m16", "ak47", "mp5", "remi", "crossbow", "rpg", "tactical shovel", "tactical axe"}
-    for _, v in pairs(goldWeapons) do
-        if string.find(n, v) then
-            return Color3.fromRGB(255, 170, 0) -- OR (GOLD)
-        end
-    end
-    
-    -- Anaconda corrigé + variantes
-    if string.find(n, "anaconda") or string.find(n, "ana conda") or string.find(n, "golden anaconda") then
-        return Color3.fromRGB(255, 0, 0) -- ROUGE
-    end
+-- === SYSTÈME DE COULEURS ===
+local RARITY_COLORS = {
+    ["Common"] = Color3.fromRGB(255, 255, 255),
+    ["Uncommon"] = Color3.fromRGB(99, 255, 52),
+    ["Rare"] = Color3.fromRGB(51, 170, 255),
+    ["Epic"] = Color3.fromRGB(237, 44, 255),
+    ["Legendary"] = Color3.fromRGB(255, 150, 0),
+    ["Omega"] = Color3.fromRGB(255, 20, 51),
+}
 
-    if string.find(n, "omega") then return Color3.fromRGB(255, 0, 0) end
-    if string.find(n, "legendary") then return Color3.fromRGB(255, 215, 0) end
-    
-    return Color3.fromRGB(255, 255, 255) -- Blanc pour le reste
-end
-
--- --- RÉCUPÉRATION DU NOM RÉEL (ANTI-LAG) ---
+-- === RÉCUPÉRATION DU NOM RÉEL ===
 local function getRealName(t)
-    if not t then return "..." end
+    if not t or not t.Name then return nil end
     if nameCache[t.Name] then return nameCache[t.Name] end
     
     local h = t:FindFirstChild("Handle")
-    if not h then return t.Name end
-    
-    local childrenNames = {}
-    for _, c in ipairs(h:GetChildren()) do childrenNames[c.Name] = true end
+    local clean = t.Name:gsub("%d+", ""):gsub("%s+", " "):match("^%s*(.-)%s*$")
+    local fallbackName = (clean ~= "" and clean ~= "Tool") and clean or t.Name
 
     for _, folder in ipairs({ReplicatedStorage:FindFirstChild("Items"), StarterPack}) do
         if folder then
             for _, item in ipairs(folder:GetDescendants()) do
                 if item:IsA("Tool") and item:FindFirstChild("Handle") then
                     local match = true
-                    for name in pairs(childrenNames) do
-                        if not item.Handle:FindFirstChild(name) then match = false break end
+                    if h then
+                        for _, c in ipairs(h:GetChildren()) do
+                            if not item.Handle:FindFirstChild(c.Name) then match = false break end
+                        end
+                    else
+                        match = false
                     end
                     if match then 
                         nameCache[t.Name] = item.Name 
@@ -59,144 +52,111 @@ local function getRealName(t)
             end
         end
     end
-    return t.Name
+    return fallbackName
 end
 
--- --- CRÉATION ESP + TRACER (INVENTAIRE SOUS LES PIEDS) ---
-local function createESP(p)
-    if not p.Character or not p.Character:FindFirstChild("Head") then return end
+-- === MISE À JOUR DE L'AFFICHAGE ===
+local function updateESP(p)
+    local bb = BillboardCache[p]
+    if not bb then return end
+    
     local char = p.Character
-
-    if activeESP[p.Name] then
-        if activeESP[p.Name].bb then activeESP[p.Name].bb:Destroy() end
-        if activeESP[p.Name].line then activeESP[p.Name].line:Remove() end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then 
+        bb.Enabled = false
+        return 
     end
-
-    local rootPart = char:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-
-    local bb = Instance.new("BillboardGui", rootPart)
-    bb.Name = "BSpin_Final_ESP"
-    bb.Size = UDim2.new(0, 60, 0, 80)
-    bb.StudsOffset = Vector3.new(0, -3.8, 0)   -- ← SOUS LES PIEDS (ajuste entre -3.2 et -4.5 selon le jeu)
-    bb.AlwaysOnTop = true
-    bb.Enabled = espInventoryEnabled
-
-    local bg = Instance.new("Frame", bb)
-    bg.Size = UDim2.new(1, 0, 1, 0)
-    bg.BackgroundColor3 = Color3.new(0, 0, 0)
-    bg.BackgroundTransparency = 0.5
-    Instance.new("UICorner", bg)
-
-    local sc = Instance.new("ScrollingFrame", bg)
-    sc.Size = UDim2.new(1, -6, 1, -6)
-    sc.Position = UDim2.new(0, 3, 0, 3)
-    sc.BackgroundTransparency = 1
-    sc.ScrollBarThickness = 0
-    sc.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Instance.new("UIListLayout", sc).Padding = UDim.new(0, 2)
-
-    local line = Drawing.new("Line")
-    line.Thickness = 1
-    line.Color = Color3.new(1, 1, 1)
-    line.Transparency = 0
-    line.Visible = false
-
-    local lastUpd = 0
-    local conn
-    conn = RunService.RenderStepped:Connect(function()
-        if not p.Parent or not char.Parent or not char:FindFirstChild("Head") then
-            conn:Disconnect()
-            bb:Destroy()
-            line:Remove()
-            activeESP[p.Name] = nil
+    
+    local lChar = LocalPlayer.Character
+    if lChar and lChar:FindFirstChild("HumanoidRootPart") then
+        local dist = (lChar.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+        if dist > MAX_DISTANCE then
+            bb.Enabled = false
             return
         end
+    end
 
-        bb.Enabled = espInventoryEnabled
+    local container = bb:FindFirstChild("EspContainer")
+    if not container then return end
+    container:ClearAllChildren()
 
-        if espInventoryEnabled then
-            local vector, onScreen = Camera:WorldToViewportPoint(char.Head.Position)
-            if onScreen then
-                line.Visible = true
-                line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                line.To = Vector2.new(vector.X, vector.Y)
-            else line.Visible = false end
-        else line.Visible = false end
+    -- LIST LAYOUT : Alignement vertical en bas pour fixer l'ancrage au sol
+    local layout = Instance.new("UIListLayout", container)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment = Enum.VerticalAlignment.Bottom 
+    layout.Padding = UDim.new(0, 2)
 
-        if tick() - lastUpd > 1.5 then
-            lastUpd = tick()
-            for _, v in ipairs(sc:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+    local tools = {}
+    if p:FindFirstChild("Backpack") then
+        for _, t in ipairs(p.Backpack:GetChildren()) do
+            if t:IsA("Tool") and t.Name:lower() ~= "fists" then table.insert(tools, t) end
+        end
+    end
+    if char then
+        for _, t in ipairs(char:GetChildren()) do
+            if t:IsA("Tool") and t.Name:lower() ~= "fists" then table.insert(tools, t) end
+        end
+    end
+
+    bb.Enabled = espInventoryEnabled and (#tools > 0)
+    
+    for _, tool in ipairs(tools) do
+        local name = getRealName(tool)
+        if name then
+            local lbl = Instance.new("TextLabel", container)
+            lbl.Size = UDim2.new(0, 180, 0, 14)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = name
+            lbl.Font = Enum.Font.SourceSansBold
+            lbl.TextSize = 11
+            lbl.TextStrokeTransparency = 0.4
             
-            local ts = {}
-            if p:FindFirstChild("Backpack") then
-                for _, t in ipairs(p.Backpack:GetChildren()) do if t:IsA("Tool") then table.insert(ts, t) end end
-            end
-            for _, t in ipairs(char:GetChildren()) do if t:IsA("Tool") then table.insert(ts, t) end end
-
-            for _, tool in ipairs(ts) do
-                local realName = getRealName(tool)
-                local f = Instance.new("Frame", sc)
-                f.Size = UDim2.new(1, 0, 0, 13)
-                f.BackgroundTransparency = 1
-
-                local l = Instance.new("TextLabel", f)
-                l.Size = UDim2.new(1, 0, 1, 0)
-                l.Text = " " .. realName
-                
-                local textColor = getToolColor(realName)
-                l.TextColor3 = textColor
-                
-                if tool.Parent == char then
-                    l.Font = Enum.Font.SourceSansBold
-                    l.TextStrokeTransparency = 0.9
-                    l.TextStrokeColor3 = textColor
-                else
-                    l.Font = Enum.Font.SourceSans
-                    l.TextStrokeTransparency = 0.5
-                end
-                
-                l.TextScaled = true
-                l.BackgroundTransparency = 1
-                l.TextXAlignment = Enum.TextXAlignment.Left
-            end
-        end
-    end)
-
-    activeESP[p.Name] = {bb = bb, line = line}
-end
-
--- Rafraîchissement quand toggle ON
-local function refreshInventoryESP()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            if espInventoryEnabled then
-                if not activeESP[p.Name] then createESP(p) end
-            else
-                if activeESP[p.Name] then
-                    if activeESP[p.Name].bb then activeESP[p.Name].bb:Destroy() end
-                    if activeESP[p.Name].line then activeESP[p.Name].line:Remove() end
-                    activeESP[p.Name] = nil
-                end
-            end
+            local rarity = tool:GetAttribute("RarityName") or tool:GetAttribute("Rarity")
+            lbl.TextColor3 = RARITY_COLORS[rarity] or Color3.new(1, 1, 1)
         end
     end
 end
 
--- --- DÉTECTION AGRESSIVE ---
-task.spawn(function()
-    while true do
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                if not p.Character:FindFirstChild("HumanoidRootPart") or not p.Character.HumanoidRootPart:FindFirstChild("BSpin_Final_ESP") then
-                    createESP(p)
-                end
-            end
-        end
-        task.wait(2)
-    end
-end)
+-- === CRÉATION DU BILLBOARD (FIXÉ AUX PIEDS) ===
+local function createESP(p)
+    if p == LocalPlayer then return end
+    
+    local function setup(char)
+        local root = char:WaitForChild("HumanoidRootPart", 15)
+        if not root then return end
+        
+        if BillboardCache[p] then BillboardCache[p]:Destroy() end
+        
+        local bb = Instance.new("BillboardGui", root)
+        bb.Name = "FixedUnderfootESP"
+        bb.Size = UDim2.new(0, 200, 0, 150)
+        
+        -- StudsOffset fixe la position relative au HumanoidRootPart.
+        -- -3.5 place l'UI exactement au niveau des pieds.
+        bb.StudsOffset = Vector3.new(0, -3.5, 0) 
+        bb.AlwaysOnTop = true
+        bb.MaxDistance = MAX_DISTANCE
+        
+        local cont = Instance.new("Frame", bb)
+        cont.Name = "EspContainer"
+        cont.Size = UDim2.new(1, 0, 1, 0)
+        cont.BackgroundTransparency = 1
+        
+        BillboardCache[p] = bb
 
+        task.spawn(function()
+            while char.Parent and bb.Parent do
+                updateESP(p)
+                task.wait(UPDATE_INTERVAL)
+            end
+        end)
+    end
+    
+    p.CharacterAdded:Connect(setup)
+    if p.Character then setup(p.Character) end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
+Players.PlayerAdded:Connect(createESP)
 
 -- === INTERFACE ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
@@ -308,8 +268,6 @@ local WallCheckEnabled = true
 local ProtectedPlayers = {}
 local PlayerButtons = {}
 local AIM_SMOOTHNESS = 1.0
-
--- AJOUT PREDICTION (valeur demandée)
 local PREDICTION_TIME = 0.01
 
 local FOVCircle = Drawing.new("Circle")
@@ -352,7 +310,7 @@ local function IsVisible(part)
     return not result
 end
 
--- === ESP ===
+-- === ESP (Name + HP) ===
 local function removeESP(char)
     if char then
         local head = char:FindFirstChild("Head")
@@ -464,21 +422,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-ESPToggle.MouseButton1Click:Connect(function()
-    espEnabledStatus = not espEnabledStatus
-    ESPToggle.Text = "ESP: " .. (espEnabledStatus and "ON" or "OFF")
-    ESPToggle.BackgroundColor3 = espEnabledStatus and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
-    for _, p in Players:GetPlayers() do
-        if p ~= LocalPlayer and p.Character then
-            if espEnabledStatus then 
-                applyESP(p.Character) 
-            else 
-                removeESP(p.Character) 
-            end
-        end
-    end
-end)
-
 -- === Protected Friends List ===
 local function UpdateProtectedList()
     for _, b in PlayerButtons do b:Destroy() end
@@ -511,7 +454,6 @@ Players.PlayerRemoving:Connect(UpdateProtectedList)
 UpdateProtectedList()
 
 -- === AIMBOT ===
-
 local function GetTargetPart(char)
     local mode = AIM_MODES[currentModeIndex]
     local partName
@@ -524,7 +466,6 @@ local function GetTargetPart(char)
 
     local part = char:FindFirstChild(partName)
     
-    -- Fallback for R6 / legacy names
     if not part then
         if partName == "RightUpperArm" then part = char:FindFirstChild("Right Arm") end
         if partName == "LeftUpperArm"   then part = char:FindFirstChild("Left Arm") end
@@ -586,7 +527,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Auto switch logic (only for auto modes)
+-- Auto switch logic
 RunService.Heartbeat:Connect(function(dt)
     if not AimbotOn then return end
     local mode = AIM_MODES[currentModeIndex]
@@ -600,6 +541,21 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 -- === BUTTONS ===
+ESPToggle.MouseButton1Click:Connect(function()
+    espEnabledStatus = not espEnabledStatus
+    ESPToggle.Text = "ESP: " .. (espEnabledStatus and "ON" or "OFF")
+    ESPToggle.BackgroundColor3 = espEnabledStatus and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+    for _, p in Players:GetPlayers() do
+        if p ~= LocalPlayer and p.Character then
+            if espEnabledStatus then 
+                applyESP(p.Character) 
+            else 
+                removeESP(p.Character) 
+            end
+        end
+    end
+end)
+
 AimbotToggle.MouseButton1Click:Connect(function()
     AimbotOn = not AimbotOn
     AimbotToggle.Text = "Aimbot: " .. (AimbotOn and "ON" or "OFF")
@@ -644,7 +600,9 @@ ESPInventoryToggle.MouseButton1Click:Connect(function()
     espInventoryEnabled = not espInventoryEnabled
     ESPInventoryToggle.Text = "ESP Inventory: " .. (espInventoryEnabled and "ON" or "OFF")
     ESPInventoryToggle.BackgroundColor3 = espInventoryEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
-    refreshInventoryESP()
+    for _, p in ipairs(Players:GetPlayers()) do
+        updateESP(p)
+    end
 end)
 
 local function makeDraggable(frame, dragArea)
