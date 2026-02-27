@@ -7,7 +7,7 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 -- === CONFIGURATION ===
-local espInventoryEnabled = true
+local espInventoryEnabled = true 
 local MAX_DISTANCE = 1500 
 local UPDATE_INTERVAL = 1.0 
 local BillboardCache = {}
@@ -115,7 +115,7 @@ local function updateESP(p)
     end
 end
 
--- === CRÉATION DU BILLBOARD (FIXÉ AUX PIEDS) ===
+-- === CRÉATION DU BILLBOARD (FIX AUTOMATIQUE) ===
 local function createESP(p)
     if p == LocalPlayer then return end
     
@@ -139,8 +139,21 @@ local function createESP(p)
         
         BillboardCache[p] = bb
 
-        -- AJOUT ICI : Affiche direct pour les nouveaux joueurs
+        -- FIX : Mise à jour immédiate et détection des changements d'objets
         updateESP(p)
+        
+        char.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") then task.wait(0.1); updateESP(p) end
+        end)
+        char.ChildRemoved:Connect(function(child)
+            if child:IsA("Tool") then task.wait(0.1); updateESP(p) end
+        end)
+        
+        local backpack = p:WaitForChild("Backpack", 5)
+        if backpack then
+            backpack.ChildAdded:Connect(function() updateESP(p) end)
+            backpack.ChildRemoved:Connect(function() updateESP(p) end)
+        end
 
         task.spawn(function()
             while char.Parent and bb.Parent do
@@ -200,8 +213,8 @@ ToggleDrag.BackgroundTransparency = 1
 local ESPInventoryToggle = Instance.new("TextButton", MainFrame)
 ESPInventoryToggle.Size = UDim2.new(0.8,0,0.12,0)
 ESPInventoryToggle.Position = UDim2.new(0.1,0,0.12,0)
-ESPInventoryToggle.BackgroundColor3 = Color3.fromRGB(255,0,0)
-ESPInventoryToggle.Text = "ESP Inventory: OFF"
+ESPInventoryToggle.BackgroundColor3 = Color3.fromRGB(0,255,0)
+ESPInventoryToggle.Text = "ESP Inventory: ON"
 ESPInventoryToggle.TextScaled = true
 Instance.new("UICorner", ESPInventoryToggle).CornerRadius = UDim.new(0,8)
 
