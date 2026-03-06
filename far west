@@ -13,7 +13,6 @@ local UPDATE_INTERVAL = 1.0
 local BillboardCache = {}
 local nameCache = {} 
 
--- === SYSTÈME DE COULEURS ===
 local RARITY_COLORS = {
     ["Common"] = Color3.fromRGB(255, 255, 255),
     ["Uncommon"] = Color3.fromRGB(99, 255, 52),
@@ -23,7 +22,6 @@ local RARITY_COLORS = {
     ["Omega"] = Color3.fromRGB(255, 20, 51),
 }
 
--- === RÉCUPÉRATION DU NOM RÉEL ===
 local function getRealName(t)
     if not t or not t.Name then return nil end
     if nameCache[t.Name] then return nameCache[t.Name] end
@@ -55,7 +53,6 @@ local function getRealName(t)
     return fallbackName
 end
 
--- === MISE À JOUR DE L'AFFICHAGE ===
 local function updateESP(p)
     local bb = BillboardCache[p]
     if not bb then return end
@@ -115,7 +112,6 @@ local function updateESP(p)
     end
 end
 
--- === CRÉATION DU BILLBOARD (FIX AUTOMATIQUE) ===
 local function createESP(p)
     if p == LocalPlayer then return end
     
@@ -139,7 +135,6 @@ local function createESP(p)
         
         BillboardCache[p] = bb
 
-        -- FIX : Mise à jour immédiate et détection des changements d'objets
         updateESP(p)
         
         char.ChildAdded:Connect(function(child)
@@ -205,6 +200,7 @@ ToggleButton.Text = "Open"
 ToggleButton.TextColor3 = Color3.fromRGB(0,0,0)
 ToggleButton.TextScaled = true
 Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0,8)
+ToggleButton.Visible = true
 
 local ToggleDrag = Instance.new("Frame", ToggleButton)
 ToggleDrag.Size = UDim2.new(1,0,1,0)
@@ -261,6 +257,15 @@ AimPartToggle.TextScaled = true
 AimPartToggle.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", AimPartToggle).CornerRadius = UDim.new(0,8)
 
+local FOVCircleToggle = Instance.new("TextButton", MainFrame)
+FOVCircleToggle.Size = UDim2.new(0.8,0,0.12,0)
+FOVCircleToggle.Position = UDim2.new(0.1,0,0.82+0.14,0)
+FOVCircleToggle.BackgroundColor3 = Color3.fromRGB(0,255,0)
+FOVCircleToggle.Text = "FOV Circle: ON"
+FOVCircleToggle.TextScaled = true
+FOVCircleToggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", FOVCircleToggle).CornerRadius = UDim.new(0,8)
+
 local PlayerListFrame = Instance.new("ScrollingFrame", MainFrame)
 PlayerListFrame.Size = UDim2.new(0.8,0,0.25,0)
 PlayerListFrame.Position = UDim2.new(0.1,0,0.96,0)
@@ -277,10 +282,13 @@ local espEnabledStatus = false
 local AimbotOn = false
 local FOVRadius = 110
 local WallCheckEnabled = true
+local FOVCircleVisible = true
+local FOVCircleForcedOff = false   -- ← ajouté pour la touche K
 local ProtectedPlayers = {}
 local PlayerButtons = {}
-local AIM_SMOOTHNESS = 1.0
-local PREDICTION_TIME = 0.01
+local AIM_SMOOTHNESS = 0.8
+local PREDICTION_TIME = 0.03
+local guiOpen = false
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Radius = FOVRadius
@@ -290,7 +298,6 @@ FOVCircle.Transparency = 0.6
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 
--- Aimbot modes
 local AIM_MODES = {
     {name = "Head (fixed)",               part = "Head",                        color = Color3.fromRGB(100,100,255)},
     {name = "Torso (fixed)",              part = "HumanoidRootPart",            color = Color3.fromRGB(255,150,50)},
@@ -305,7 +312,6 @@ local currentAutoIndex = 1
 local lastSwitchTime = 0
 local SWITCH_INTERVAL = 0.7
 
--- === UTILITY FUNCTIONS ===
 local function IsAlive(char)
     local h = char and char:FindFirstChildOfClass("Humanoid")
     return h and h.Health > 0
@@ -322,7 +328,6 @@ local function IsVisible(part)
     return not result
 end
 
--- === ESP (Name + HP) ===
 local function removeESP(char)
     if char then
         local head = char:FindFirstChild("Head")
@@ -434,7 +439,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- === Protected Friends List ===
 local function UpdateProtectedList()
     for _, b in PlayerButtons do b:Destroy() end
     PlayerButtons = {}
@@ -465,7 +469,6 @@ Players.PlayerAdded:Connect(UpdateProtectedList)
 Players.PlayerRemoving:Connect(UpdateProtectedList)
 UpdateProtectedList()
 
--- === AIMBOT ===
 local function GetTargetPart(char)
     local mode = AIM_MODES[currentModeIndex]
     local partName
@@ -518,7 +521,8 @@ end
 RunService.RenderStepped:Connect(function()
     FOVCircle.Position = Camera.ViewportSize / 2
     FOVCircle.Radius = FOVRadius
-    FOVCircle.Visible = AimbotOn
+    FOVCircle.Visible = AimbotOn and FOVCircleVisible and not FOVCircleForcedOff
+    
     if AimbotOn then
         local target = GetClosest()
         if target and target.Character then
@@ -542,7 +546,6 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- === BUTTONS ===
 ESPToggle.MouseButton1Click:Connect(function()
     espEnabledStatus = not espEnabledStatus
     ESPToggle.Text = "ESP: " .. (espEnabledStatus and "ON" or "OFF")
@@ -590,12 +593,10 @@ FOVSlider.FocusLost:Connect(function(enterPressed)
     end
 end)
 
-local guiOpen = false
-ToggleButton.MouseButton1Click:Connect(function()
-    guiOpen = not guiOpen
-    MainFrame.Visible = guiOpen
-    ToggleButton.Text = guiOpen and "Close" or "Open"
-    if guiOpen then UpdateProtectedList() end
+FOVCircleToggle.MouseButton1Click:Connect(function()
+    FOVCircleVisible = not FOVCircleVisible
+    FOVCircleToggle.Text = "FOV Circle: " .. (FOVCircleVisible and "ON" or "OFF")
+    FOVCircleToggle.BackgroundColor3 = FOVCircleVisible and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
 end)
 
 ESPInventoryToggle.MouseButton1Click:Connect(function()
@@ -634,3 +635,35 @@ end
 
 makeDraggable(MainFrame, MainDrag)
 makeDraggable(ToggleButton, ToggleDrag)
+
+ToggleButton.MouseButton1Click:Connect(function()
+    guiOpen = not guiOpen
+    MainFrame.Visible = guiOpen
+    ToggleButton.Text = guiOpen and "Close" or "Open"
+    if guiOpen then UpdateProtectedList() end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.G then
+        guiOpen = not guiOpen
+        MainFrame.Visible = guiOpen
+        ToggleButton.Visible = not guiOpen
+        if guiOpen then UpdateProtectedList() end
+    end
+    
+    if input.KeyCode == Enum.KeyCode.K then
+        FOVCircleForcedOff = not FOVCircleForcedOff
+        
+        if FOVCircleToggle then
+            if FOVCircleForcedOff then
+                FOVCircleToggle.BackgroundColor3 = Color3.fromRGB(150,150,150)
+                FOVCircleToggle.Text = "FOV Circle: FORCED OFF (K)"
+            else
+                FOVCircleToggle.BackgroundColor3 = FOVCircleVisible and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+                FOVCircleToggle.Text = "FOV Circle: " .. (FOVCircleVisible and "ON" or "OFF")
+            end
+        end
+    end
+end)
