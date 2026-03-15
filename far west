@@ -8,8 +8,8 @@ local LocalPlayer = Players.LocalPlayer
 
 -- === CONFIGURATION ===
 local espInventoryEnabled = true 
-local MAX_DISTANCE = 1500 
-local UPDATE_INTERVAL = 1.5 
+local MAX_DISTANCE = 2000 
+local UPDATE_INTERVAL = 1 
 local BillboardCache = {}
 local nameCache = {} 
 
@@ -24,12 +24,40 @@ local RARITY_COLORS = {
 
 local function getRealName(t)
     if not t or not t.Name then return nil end
-    if nameCache[t.Name] then return nameCache[t.Name] end
+    
+    local originalName = t.Name
+    local lowerName = originalName:lower()
+
+    -- Nettoyage agressif des suffixes que Roblox ajoute quand l'outil est équipé
+    local cleaned = lowerName
+        :gsub("%d+$", "")               -- chiffres à la fin
+        :gsub("_%d+$", "")              -- _12345 à la fin
+        :gsub("%s*%d+%s*$", "")         -- espaces + chiffres à la fin
+        :gsub("[%s_]+", " ")            -- multiples espaces/underscores → un seul espace
+        :gsub("([^%w%s])", "")          -- enlève caractères spéciaux non désirés
+        :match("^%s*(.-)%s*$")          -- trim
+
+    -- Priorité maximale : détection fishing rods SANS passer par le cache
+    if cleaned:find("fishing") or cleaned:find("rod") or cleaned:find("canne") or cleaned:find("pêche") then
+        if cleaned:find("ultimate") or cleaned:find("ult") then
+            return "Ultimate Fishing Rod"
+        elseif cleaned:find("advanced") then
+            return "Advanced Fishing Rod"
+        elseif cleaned:find("pro") then
+            return "Pro Fishing Rod"
+        else
+            return "Regular Fishing Rod"
+        end
+    end
+
+    -- Pour les autres outils → cache + détection originale
+    if nameCache[originalName] then 
+        return nameCache[originalName] 
+    end
     
     local h = t:FindFirstChild("Handle")
-    local clean = t.Name:gsub("%d+", ""):gsub("%s+", " "):match("^%s*(.-)%s*$")
-    local fallbackName = (clean ~= "" and clean ~= "Tool") and clean or t.Name
-
+    local fallbackName = cleaned
+    
     for _, folder in ipairs({ReplicatedStorage:FindFirstChild("Items"), StarterPack}) do
         if folder then
             for _, item in ipairs(folder:GetDescendants()) do
@@ -37,19 +65,24 @@ local function getRealName(t)
                     local match = true
                     if h then
                         for _, c in ipairs(h:GetChildren()) do
-                            if not item.Handle:FindFirstChild(c.Name) then match = false break end
+                            if not item.Handle:FindFirstChild(c.Name) then 
+                                match = false 
+                                break 
+                            end
                         end
                     else
                         match = false
                     end
                     if match then 
-                        nameCache[t.Name] = item.Name 
+                        nameCache[originalName] = item.Name 
                         return item.Name 
                     end
                 end
             end
         end
     end
+    
+    nameCache[originalName] = fallbackName
     return fallbackName
 end
 
@@ -283,7 +316,7 @@ local AimbotOn = false
 local FOVRadius = 110
 local WallCheckEnabled = true
 local FOVCircleVisible = true
-local FOVCircleForcedOff = false   -- ← ajouté pour la touche K
+local FOVCircleForcedOff = false
 local ProtectedPlayers = {}
 local PlayerButtons = {}
 local AIM_SMOOTHNESS = 0.8
