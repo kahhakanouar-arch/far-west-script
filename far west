@@ -320,7 +320,7 @@ local FOVCircleForcedOff = false
 local ProtectedPlayers = {}
 local PlayerButtons = {}
 local AIM_SMOOTHNESS = 0.8
-local PREDICTION_TIME = 0.03
+local PREDICTION_TIME = 0.02
 local guiOpen = false
 
 local FOVCircle = Drawing.new("Circle")
